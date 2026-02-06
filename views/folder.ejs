@@ -2,12 +2,18 @@
 <section class="card">
   <div class="card-header">
 <<<<<<< ours
+<<<<<<< ours
     <h2><%= folder.name %></h2>
 =======
+=======
+>>>>>>> theirs
     <div>
       <h2><%= folder.name %></h2>
       <p class="muted">Объем: <%= Math.round(folderSize / 1024) %> KB</p>
     </div>
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
     <span class="badge">Видимость: <%= folder.visibility %></span>
   </div>
@@ -56,6 +62,12 @@
           <strong><%= file.original_name %></strong>
           <span class="muted"><%= Math.round(file.size / 1024) %> KB</span>
 <<<<<<< ours
+<<<<<<< ours
+=======
+          <form method="post" action="/files/<%= file.id %>/delete" class="inline-form">
+            <button class="button danger" type="submit">Удалить</button>
+          </form>
+>>>>>>> theirs
 =======
           <form method="post" action="/files/<%= file.id %>/delete" class="inline-form">
             <button class="button danger" type="submit">Удалить</button>
@@ -76,7 +88,10 @@
   <p class="muted">Поддерживаются фото и видео. Скачивание не предусмотрено.</p>
 </section>
 <<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
 
 <section class="card danger-zone">
   <h3>Удаление папки</h3>
@@ -85,5 +100,8 @@
     <button class="button danger" type="submit">Удалить папку</button>
   </form>
 </section>
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 <%- include('partials_footer') %>

@@ -4,7 +4,10 @@ const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
+<<<<<<< ours
 
+=======
+>>>>>>> theirs
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const db = require('./db');
@@ -90,12 +93,19 @@ app.use((req, _res, next) => {
 
 app.get('/', (req, res) => {
   if (!req.user) {
+<<<<<<< ours
     return res.render('index', { user: null, folders: [] });
+=======
+    return res.render('index', { user: null, folders: [], totalSize: 0 });
+>>>>>>> theirs
   }
   const folders = db
     .prepare('SELECT * FROM folders WHERE owner_id = ? ORDER BY created_at DESC')
     .all(req.user.id);
+<<<<<<< ours
   return res.render('index', { user: req.user, folders });
+=======
+>>>>>>> theirs
   const totalSize = db
     .prepare('SELECT COALESCE(SUM(size), 0) as total FROM files WHERE owner_id = ?')
     .get(req.user.id).total;
@@ -188,8 +198,11 @@ app.get('/folders/:id', requireAuth, (req, res) => {
     return res.status(404).render('error', { user: req.user, message: 'Папка не найдена.' });
   }
   const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
+<<<<<<< ours
   return res.render('folder', { user: req.user, folder, files, req });
 
+=======
+>>>>>>> theirs
   const folderSize = db
     .prepare('SELECT COALESCE(SUM(size), 0) as total FROM files WHERE folder_id = ?')
     .get(folder.id).total;
@@ -231,7 +244,10 @@ app.post('/folders/:id/upload', requireUploader, upload.array('files', 10), (req
   return res.redirect(`/folders/${folder.id}`);
 });
 
+<<<<<<< ours
 
+=======
+>>>>>>> theirs
 app.post('/folders/:id/delete', requireAuth, (req, res) => {
   const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
   if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
