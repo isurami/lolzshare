@@ -12,7 +12,14 @@
 <% if (user) { %>
   <section class="card">
     <div class="card-header">
+<<<<<<< ours
       <h2>Ваши папки</h2>
+=======
+      <div>
+        <h2>Ваши папки</h2>
+        <p class="muted">Объем хранилища: <%= Math.round(totalSize / 1024) %> KB</p>
+      </div>
+>>>>>>> theirs
       <% if (user.can_upload || user.is_admin) { %>
         <a class="button" href="/folders/new">Создать папку</a>
       <% } else { %>

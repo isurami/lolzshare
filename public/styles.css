@@ -76,6 +76,10 @@ nav a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+<<<<<<< ours
+=======
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+>>>>>>> theirs
 }
 
 .card.narrow {
@@ -111,6 +115,15 @@ nav a {
   background: transparent;
 }
 
+<<<<<<< ours
+=======
+.button.danger {
+  background: #fee4e2;
+  border-color: #fda29b;
+  color: #b42318;
+}
+
+>>>>>>> theirs
 .inline-form {
   display: inline;
 }
@@ -198,6 +211,14 @@ nav a {
   gap: 4px;
 }
 
+<<<<<<< ours
+=======
+.danger-zone {
+  border: 1px dashed #fda29b;
+  background: #fff4f3;
+}
+
+>>>>>>> theirs
 .table {
   width: 100%;
   border-collapse: collapse;

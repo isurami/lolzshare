@@ -4,7 +4,8 @@ const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
-const bcrypt = require('bcrypt');
+
+const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const db = require('./db');
 
@@ -95,6 +96,10 @@ app.get('/', (req, res) => {
     .prepare('SELECT * FROM folders WHERE owner_id = ? ORDER BY created_at DESC')
     .all(req.user.id);
   return res.render('index', { user: req.user, folders });
+  const totalSize = db
+    .prepare('SELECT COALESCE(SUM(size), 0) as total FROM files WHERE owner_id = ?')
+    .get(req.user.id).total;
+  return res.render('index', { user: req.user, folders, totalSize });
 });
 
 app.get('/register', (_req, res) => {
@@ -184,6 +189,11 @@ app.get('/folders/:id', requireAuth, (req, res) => {
   }
   const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
   return res.render('folder', { user: req.user, folder, files, req });
+
+  const folderSize = db
+    .prepare('SELECT COALESCE(SUM(size), 0) as total FROM files WHERE folder_id = ?')
+    .get(folder.id).total;
+  return res.render('folder', { user: req.user, folder, files, req, folderSize });
 });
 
 app.post('/folders/:id/visibility', requireAuth, (req, res) => {
@@ -221,6 +231,24 @@ app.post('/folders/:id/upload', requireUploader, upload.array('files', 10), (req
   return res.redirect(`/folders/${folder.id}`);
 });
 
+
+app.post('/folders/:id/delete', requireAuth, (req, res) => {
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
+  if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
+    return res.status(404).render('error', { user: req.user, message: 'Папка не найдена.' });
+  }
+  const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
+  for (const file of files) {
+    const filePath = path.join(uploadDir, file.storage_name);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+  db.prepare('DELETE FROM files WHERE folder_id = ?').run(folder.id);
+  db.prepare('DELETE FROM folders WHERE id = ?').run(folder.id);
+  return res.redirect('/');
+});
+
 app.get('/share/:token', (req, res) => {
   const folder = db.prepare('SELECT * FROM folders WHERE share_token = ?').get(req.params.token);
   if (!folder || folder.visibility !== 'link') {
@@ -237,6 +265,23 @@ app.get('/public/:id', (req, res) => {
   }
   const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
   return res.render('share', { user: req.user, folder, files, shareType: 'public' });
+});
+
+app.post('/files/:id/delete', requireAuth, (req, res) => {
+  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(req.params.id);
+  if (!file) {
+    return res.status(404).render('error', { user: req.user, message: 'Файл не найден.' });
+  }
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(file.folder_id);
+  if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
+    return res.status(403).render('error', { user: req.user, message: 'Нет доступа.' });
+  }
+  const filePath = path.join(uploadDir, file.storage_name);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+  db.prepare('DELETE FROM files WHERE id = ?').run(file.id);
+  return res.redirect(`/folders/${folder.id}`);
 });
 
 app.get('/media/:id', (req, res) => {
