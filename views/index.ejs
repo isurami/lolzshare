@@ -1,7 +1,9 @@
 <%- include('partials_header', { user }) %>
 <section class="hero">
-  <h1>Личный файлообменник с просмотром</h1>
-  <p>Создавайте папки, загружайте медиа и делитесь ссылками для просмотра.</p>
+  <div>
+    <h1>Личный файлообменник с просмотром</h1>
+    <p>Создавайте папки, загружайте медиа и делитесь ссылками для просмотра.</p>
+  </div>
   <% if (!user) { %>
     <div class="cta">
       <a class="button primary" href="/register">Начать</a>
@@ -12,12 +14,21 @@
 <% if (user) { %>
   <section class="card">
     <div class="card-header">
-      <h2>Ваши папки</h2>
-      <% if (user.can_upload || user.is_admin) { %>
-        <a class="button" href="/folders/new">Создать папку</a>
-      <% } else { %>
-        <span class="badge">Нужны права на загрузку</span>
-      <% } %>
+      <div>
+        <h2>Ваши папки</h2>
+        <p class="muted">Объем хранилища: <%= Math.round((totalSize || 0) / 1024) %> KB</p>
+      </div>
+      <div class="card-actions">
+        <form method="get" action="/" class="search-form">
+          <input type="text" name="q" placeholder="Поиск папок" value="<%= search || '' %>">
+          <button class="button ghost" type="submit">Найти</button>
+        </form>
+        <% if (user.can_upload || user.is_admin) { %>
+          <a class="button" href="/folders/new">Создать папку</a>
+        <% } else { %>
+          <span class="badge">Нужны права на загрузку</span>
+        <% } %>
+      </div>
     </div>
     <% if (folders.length === 0) { %>
       <p>Пока нет папок. Создайте первую, если у вас есть права.</p>
@@ -28,11 +39,44 @@
             <div>
               <strong><%= folder.name %></strong>
               <span class="muted">(<%= folder.visibility %>)</span>
+              <% if (folder.description) { %>
+                <div class="muted"><%= folder.description %></div>
+              <% } %>
             </div>
             <a class="button ghost" href="/folders/<%= folder.id %>">Открыть</a>
           </li>
         <% }) %>
       </ul>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Недавние загрузки</h2>
+      <span class="badge">Последние 6</span>
+    </div>
+    <% if (recentFiles.length === 0) { %>
+      <p>Пока нет загруженных файлов.</p>
+    <% } else { %>
+      <div class="media-grid compact">
+        <% recentFiles.forEach(file => { %>
+          <div class="media-card">
+            <div class="media-preview">
+              <% if (file.mime_type.startsWith('image/')) { %>
+                <img src="/media/<%= file.id %>" alt="<%= file.display_name || file.original_name %>">
+              <% } else if (file.mime_type.startsWith('video/')) { %>
+                <video controls src="/media/<%= file.id %>"></video>
+              <% } else { %>
+                <div class="file-icon">Файл</div>
+              <% } %>
+            </div>
+            <div class="media-meta">
+              <strong><%= file.display_name || file.original_name %></strong>
+              <span class="muted"><%= file.folder_name %></span>
+            </div>
+          </div>
+        <% }) %>
+      </div>
     <% } %>
   </section>
 <% } %>

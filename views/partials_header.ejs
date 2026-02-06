@@ -15,6 +15,7 @@
         <% if (user.is_admin) { %>
           <a href="/admin">Админка</a>
         <% } %>
+        <span class="user-chip"><%= user.email %></span>
         <form action="/logout" method="post" class="inline-form">
           <button type="submit">Выйти</button>
         </form>

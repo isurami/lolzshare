@@ -1,19 +1,36 @@
 <%- include('partials_header', { user }) %>
 <section class="card">
   <div class="card-header">
-    <h2><%= folder.name %></h2>
+    <div>
+      <h2><%= folder.name %></h2>
+      <p class="muted">Объем: <%= Math.round(folderSize / 1024) %> KB</p>
+    </div>
     <span class="badge">Видимость: <%= folder.visibility %></span>
   </div>
-  <form method="post" action="/folders/<%= folder.id %>/visibility" class="form-inline">
-    <label>Видимость
-      <select name="visibility">
-        <option value="private" <%= folder.visibility === 'private' ? 'selected' : '' %>>Приватная</option>
-        <option value="link" <%= folder.visibility === 'link' ? 'selected' : '' %>>По ссылке</option>
-        <option value="public" <%= folder.visibility === 'public' ? 'selected' : '' %>>Публичная</option>
-      </select>
-    </label>
-    <button class="button ghost" type="submit">Сохранить</button>
-  </form>
+  <% if (folder.description) { %>
+    <p class="muted"><%= folder.description %></p>
+  <% } %>
+  <div class="split">
+    <form method="post" action="/folders/<%= folder.id %>/visibility" class="form-inline">
+      <label>Видимость
+        <select name="visibility">
+          <option value="private" <%= folder.visibility === 'private' ? 'selected' : '' %>>Приватная</option>
+          <option value="link" <%= folder.visibility === 'link' ? 'selected' : '' %>>По ссылке</option>
+          <option value="public" <%= folder.visibility === 'public' ? 'selected' : '' %>>Публичная</option>
+        </select>
+      </label>
+      <button class="button ghost" type="submit">Сохранить</button>
+    </form>
+    <form method="post" action="/folders/<%= folder.id %>/update" class="form-inline">
+      <label>Название
+        <input type="text" name="name" value="<%= folder.name %>" required>
+      </label>
+      <label>Описание
+        <input type="text" name="description" value="<%= folder.description || '' %>">
+      </label>
+      <button class="button ghost" type="submit">Обновить</button>
+    </form>
+  </div>
   <% if (folder.visibility === 'link' && folder.share_token) { %>
     <div class="share-box">
       <span>Ссылка на просмотр:</span>
@@ -46,8 +63,31 @@
           <% } %>
         </div>
         <div class="media-meta">
-          <strong><%= file.original_name %></strong>
+          <strong><%= file.display_name || file.original_name %></strong>
           <span class="muted"><%= Math.round(file.size / 1024) %> KB</span>
+          <form method="post" action="/files/<%= file.id %>/update" class="file-form">
+            <label>Название
+              <input type="text" name="displayName" value="<%= file.display_name || file.original_name %>">
+            </label>
+            <label>Заметка
+              <input type="text" name="note" value="<%= file.note || '' %>">
+            </label>
+            <label>Переместить
+              <select name="moveTo">
+                <% userFolders.forEach(userFolder => { %>
+                  <option value="<%= userFolder.id %>" <%= userFolder.id === folder.id ? 'selected' : '' %>>
+                    <%= userFolder.name %>
+                  </option>
+                <% }) %>
+              </select>
+            </label>
+            <div class="file-actions">
+              <button class="button ghost" type="submit">Сохранить</button>
+              <button class="button danger" formmethod="post" formaction="/files/<%= file.id %>/delete" type="submit">
+                Удалить
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     <% }) %>
@@ -61,5 +101,13 @@
     <button class="button primary" type="submit">Загрузить</button>
   </form>
   <p class="muted">Поддерживаются фото и видео. Скачивание не предусмотрено.</p>
+</section>
+
+<section class="card danger-zone">
+  <h3>Удаление папки</h3>
+  <p class="muted">Все файлы в папке будут удалены без возможности восстановления.</p>
+  <form method="post" action="/folders/<%= folder.id %>/delete" class="form">
+    <button class="button danger" type="submit">Удалить папку</button>
+  </form>
 </section>
 <%- include('partials_footer') %>

@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const db = require('./db');
 
@@ -89,12 +89,27 @@ app.use((req, _res, next) => {
 
 app.get('/', (req, res) => {
   if (!req.user) {
-    return res.render('index', { user: null, folders: [] });
+    return res.render('index', { user: null, folders: [], totalSize: 0 });
   }
-  const folders = db
-    .prepare('SELECT * FROM folders WHERE owner_id = ? ORDER BY created_at DESC')
+  const search = (req.query.q || '').trim();
+  const folders = search
+    ? db
+        .prepare(
+          'SELECT * FROM folders WHERE owner_id = ? AND name LIKE ? ORDER BY created_at DESC'
+        )
+        .all(req.user.id, `%${search}%`)
+    : db
+        .prepare('SELECT * FROM folders WHERE owner_id = ? ORDER BY created_at DESC')
+        .all(req.user.id);
+  const totalSize = db
+    .prepare('SELECT COALESCE(SUM(size), 0) as total FROM files WHERE owner_id = ?')
+    .get(req.user.id).total;
+  const recentFiles = db
+    .prepare(
+      'SELECT files.*, folders.name as folder_name FROM files JOIN folders ON files.folder_id = folders.id WHERE files.owner_id = ? ORDER BY files.created_at DESC LIMIT 6'
+    )
     .all(req.user.id);
-  return res.render('index', { user: req.user, folders });
+  return res.render('index', { user: req.user, folders, totalSize, search, recentFiles });
 });
 
 app.get('/register', (_req, res) => {
@@ -165,15 +180,13 @@ app.get('/folders/new', requireUploader, (req, res) => {
 });
 
 app.post('/folders', requireUploader, (req, res) => {
-  const { name } = req.body;
+  const { name, description } = req.body;
   if (!name) {
     return res.render('folder_new', { user: req.user, error: 'Название обязательно.' });
   }
-  db.prepare('INSERT INTO folders (owner_id, name, visibility) VALUES (?, ?, ?)').run(
-    req.user.id,
-    name,
-    'private'
-  );
+  db.prepare(
+    'INSERT INTO folders (owner_id, name, description, visibility) VALUES (?, ?, ?, ?)'
+  ).run(req.user.id, name, description || null, 'private');
   return res.redirect('/');
 });
 
@@ -183,7 +196,20 @@ app.get('/folders/:id', requireAuth, (req, res) => {
     return res.status(404).render('error', { user: req.user, message: 'Папка не найдена.' });
   }
   const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
-  return res.render('folder', { user: req.user, folder, files, req });
+  const userFolders = db
+    .prepare('SELECT id, name FROM folders WHERE owner_id = ? ORDER BY created_at DESC')
+    .all(req.user.id);
+  const folderSize = db
+    .prepare('SELECT COALESCE(SUM(size), 0) as total FROM files WHERE folder_id = ?')
+    .get(folder.id).total;
+  return res.render('folder', {
+    user: req.user,
+    folder,
+    files,
+    req,
+    folderSize,
+    userFolders
+  });
 });
 
 app.post('/folders/:id/visibility', requireAuth, (req, res) => {
@@ -207,18 +233,60 @@ app.post('/folders/:id/visibility', requireAuth, (req, res) => {
   return res.redirect(`/folders/${folder.id}`);
 });
 
+app.post('/folders/:id/update', requireUploader, (req, res) => {
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
+  if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
+    return res.status(404).render('error', { user: req.user, message: 'Папка не найдена.' });
+  }
+  const { name, description } = req.body;
+  if (!name) {
+    return res.status(400).render('error', { user: req.user, message: 'Название обязательно.' });
+  }
+  db.prepare('UPDATE folders SET name = ?, description = ? WHERE id = ?').run(
+    name,
+    description || null,
+    folder.id
+  );
+  return res.redirect(`/folders/${folder.id}`);
+});
+
 app.post('/folders/:id/upload', requireUploader, upload.array('files', 10), (req, res) => {
   const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
   if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
     return res.status(404).render('error', { user: req.user, message: 'Папка не найдена.' });
   }
   const stmt = db.prepare(
-    'INSERT INTO files (folder_id, owner_id, original_name, storage_name, mime_type, size) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO files (folder_id, owner_id, original_name, display_name, storage_name, mime_type, size) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
   for (const file of req.files) {
-    stmt.run(folder.id, req.user.id, file.originalname, file.filename, file.mimetype, file.size);
+    stmt.run(
+      folder.id,
+      req.user.id,
+      file.originalname,
+      file.originalname,
+      file.filename,
+      file.mimetype,
+      file.size
+    );
   }
   return res.redirect(`/folders/${folder.id}`);
+});
+
+app.post('/folders/:id/delete', requireAuth, (req, res) => {
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
+  if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
+    return res.status(404).render('error', { user: req.user, message: 'Папка не найдена.' });
+  }
+  const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
+  for (const file of files) {
+    const filePath = path.join(uploadDir, file.storage_name);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+  db.prepare('DELETE FROM files WHERE folder_id = ?').run(folder.id);
+  db.prepare('DELETE FROM folders WHERE id = ?').run(folder.id);
+  return res.redirect('/');
 });
 
 app.get('/share/:token', (req, res) => {
@@ -237,6 +305,49 @@ app.get('/public/:id', (req, res) => {
   }
   const files = db.prepare('SELECT * FROM files WHERE folder_id = ?').all(folder.id);
   return res.render('share', { user: req.user, folder, files, shareType: 'public' });
+});
+
+app.post('/files/:id/delete', requireAuth, (req, res) => {
+  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(req.params.id);
+  if (!file) {
+    return res.status(404).render('error', { user: req.user, message: 'Файл не найден.' });
+  }
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(file.folder_id);
+  if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
+    return res.status(403).render('error', { user: req.user, message: 'Нет доступа.' });
+  }
+  const filePath = path.join(uploadDir, file.storage_name);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+  db.prepare('DELETE FROM files WHERE id = ?').run(file.id);
+  return res.redirect(`/folders/${folder.id}`);
+});
+
+app.post('/files/:id/update', requireUploader, (req, res) => {
+  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(req.params.id);
+  if (!file) {
+    return res.status(404).render('error', { user: req.user, message: 'Файл не найден.' });
+  }
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(file.folder_id);
+  if (!folder || !ensureAdminOrOwner(req.user, folder.owner_id)) {
+    return res.status(403).render('error', { user: req.user, message: 'Нет доступа.' });
+  }
+  const { displayName, note, moveTo } = req.body;
+  const targetFolderId = moveTo ? Number(moveTo) : folder.id;
+  if (Number.isNaN(targetFolderId)) {
+    return res.status(400).render('error', { user: req.user, message: 'Неверная папка.' });
+  }
+  if (targetFolderId !== folder.id) {
+    const targetFolder = db.prepare('SELECT * FROM folders WHERE id = ?').get(targetFolderId);
+    if (!targetFolder || !ensureAdminOrOwner(req.user, targetFolder.owner_id)) {
+      return res.status(403).render('error', { user: req.user, message: 'Нет доступа.' });
+    }
+  }
+  db.prepare(
+    'UPDATE files SET display_name = ?, note = ?, folder_id = ? WHERE id = ?'
+  ).run(displayName || file.original_name, note || null, targetFolderId, file.id);
+  return res.redirect(`/folders/${targetFolderId}`);
 });
 
 app.get('/media/:id', (req, res) => {

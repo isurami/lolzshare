@@ -25,6 +25,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_id INTEGER NOT NULL,
     name TEXT NOT NULL,
+    description TEXT,
     visibility TEXT NOT NULL DEFAULT 'private',
     share_token TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -36,6 +37,8 @@ db.exec(`
     folder_id INTEGER NOT NULL,
     owner_id INTEGER NOT NULL,
     original_name TEXT NOT NULL,
+    display_name TEXT,
+    note TEXT,
     storage_name TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size INTEGER NOT NULL,
@@ -44,5 +47,22 @@ db.exec(`
     FOREIGN KEY(owner_id) REFERENCES users(id)
   );
 `);
+
+function columnExists(table, column) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  return columns.some((col) => col.name === column);
+}
+
+if (!columnExists('folders', 'description')) {
+  db.prepare('ALTER TABLE folders ADD COLUMN description TEXT').run();
+}
+
+if (!columnExists('files', 'display_name')) {
+  db.prepare('ALTER TABLE files ADD COLUMN display_name TEXT').run();
+}
+
+if (!columnExists('files', 'note')) {
+  db.prepare('ALTER TABLE files ADD COLUMN note TEXT').run();
+}
 
 module.exports = db;

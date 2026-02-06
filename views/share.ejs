@@ -5,6 +5,9 @@
     Доступ: <%= shareType === 'public' ? 'публичный' : 'по ссылке' %> ·
     Файлов: <%= files.length %>
   </p>
+  <% if (folder.description) { %>
+    <p class="muted"><%= folder.description %></p>
+  <% } %>
 </section>
 
 <section class="card">
@@ -21,8 +24,11 @@
           <% } %>
         </div>
         <div class="media-meta">
-          <strong><%= file.original_name %></strong>
+          <strong><%= file.display_name || file.original_name %></strong>
           <span class="muted"><%= Math.round(file.size / 1024) %> KB</span>
+          <% if (file.note) { %>
+            <span class="muted"><%= file.note %></span>
+          <% } %>
         </div>
       </div>
     <% }) %>
