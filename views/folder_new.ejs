@@ -1,0 +1,17 @@
+<%- include('partials_header', { user }) %>
+<section class="card narrow">
+  <h2>Новая папка</h2>
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+  <form method="post" action="/folders" class="form">
+    <label>Название
+      <input type="text" name="name" required>
+    </label>
+    <label>Описание
+      <textarea name="description" rows="3" placeholder="Коротко о содержимом папки"></textarea>
+    </label>
+    <button class="button primary" type="submit">Создать</button>
+  </form>
+</section>
+<%- include('partials_footer') %>
