@@ -1,0 +1,31 @@
+<%- include('partials_header', { user }) %>
+<section class="card">
+  <h2><%= folder.name %></h2>
+  <p class="muted">
+    Доступ: <%= shareType === 'public' ? 'публичный' : 'по ссылке' %> ·
+    Файлов: <%= files.length %>
+  </p>
+</section>
+
+<section class="card">
+  <div class="media-grid">
+    <% files.forEach(file => { %>
+      <div class="media-card">
+        <div class="media-preview">
+          <% if (file.mime_type.startsWith('image/')) { %>
+            <img src="/media/<%= file.id %>?token=<%= folder.share_token || '' %>" alt="<%= file.original_name %>">
+          <% } else if (file.mime_type.startsWith('video/')) { %>
+            <video controls src="/media/<%= file.id %>?token=<%= folder.share_token || '' %>"></video>
+          <% } else { %>
+            <div class="file-icon">Файл</div>
+          <% } %>
+        </div>
+        <div class="media-meta">
+          <strong><%= file.original_name %></strong>
+          <span class="muted"><%= Math.round(file.size / 1024) %> KB</span>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<%- include('partials_footer') %>

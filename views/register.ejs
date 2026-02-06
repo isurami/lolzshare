@@ -1,0 +1,18 @@
+<%- include('partials_header', { user: null }) %>
+<section class="card narrow">
+  <h2>Регистрация</h2>
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+  <form method="post" action="/register" class="form">
+    <label>Email
+      <input type="email" name="email" required>
+    </label>
+    <label>Пароль
+      <input type="password" name="password" required minlength="6">
+    </label>
+    <button class="button primary" type="submit">Создать аккаунт</button>
+  </form>
+  <p class="muted">Уже есть аккаунт? <a href="/login">Войти</a>.</p>
+</section>
+<%- include('partials_footer') %>

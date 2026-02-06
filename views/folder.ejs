@@ -1,0 +1,65 @@
+<%- include('partials_header', { user }) %>
+<section class="card">
+  <div class="card-header">
+    <h2><%= folder.name %></h2>
+    <span class="badge">Видимость: <%= folder.visibility %></span>
+  </div>
+  <form method="post" action="/folders/<%= folder.id %>/visibility" class="form-inline">
+    <label>Видимость
+      <select name="visibility">
+        <option value="private" <%= folder.visibility === 'private' ? 'selected' : '' %>>Приватная</option>
+        <option value="link" <%= folder.visibility === 'link' ? 'selected' : '' %>>По ссылке</option>
+        <option value="public" <%= folder.visibility === 'public' ? 'selected' : '' %>>Публичная</option>
+      </select>
+    </label>
+    <button class="button ghost" type="submit">Сохранить</button>
+  </form>
+  <% if (folder.visibility === 'link' && folder.share_token) { %>
+    <div class="share-box">
+      <span>Ссылка на просмотр:</span>
+      <input type="text" readonly value="<%= `${req.protocol}://${req.get('host')}/share/${folder.share_token}` %>">
+    </div>
+  <% } %>
+  <% if (folder.visibility === 'public') { %>
+    <div class="share-box">
+      <span>Публичная ссылка:</span>
+      <input type="text" readonly value="<%= `${req.protocol}://${req.get('host')}/public/${folder.id}` %>">
+    </div>
+  <% } %>
+</section>
+
+<section class="card">
+  <h3>Файлы</h3>
+  <% if (files.length === 0) { %>
+    <p>Файлов пока нет.</p>
+  <% } %>
+  <div class="media-grid">
+    <% files.forEach(file => { %>
+      <div class="media-card">
+        <div class="media-preview">
+          <% if (file.mime_type.startsWith('image/')) { %>
+            <img src="/media/<%= file.id %>" alt="<%= file.original_name %>">
+          <% } else if (file.mime_type.startsWith('video/')) { %>
+            <video controls src="/media/<%= file.id %>"></video>
+          <% } else { %>
+            <div class="file-icon">Файл</div>
+          <% } %>
+        </div>
+        <div class="media-meta">
+          <strong><%= file.original_name %></strong>
+          <span class="muted"><%= Math.round(file.size / 1024) %> KB</span>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<section class="card">
+  <h3>Загрузка</h3>
+  <form method="post" action="/folders/<%= folder.id %>/upload" enctype="multipart/form-data" class="form">
+    <input type="file" name="files" multiple required>
+    <button class="button primary" type="submit">Загрузить</button>
+  </form>
+  <p class="muted">Поддерживаются фото и видео. Скачивание не предусмотрено.</p>
+</section>
+<%- include('partials_footer') %>

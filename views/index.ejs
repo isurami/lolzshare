@@ -1,0 +1,40 @@
+<%- include('partials_header', { user }) %>
+<section class="hero">
+  <h1>Личный файлообменник с просмотром</h1>
+  <p>Создавайте папки, загружайте медиа и делитесь ссылками для просмотра.</p>
+  <% if (!user) { %>
+    <div class="cta">
+      <a class="button primary" href="/register">Начать</a>
+    </div>
+  <% } %>
+</section>
+
+<% if (user) { %>
+  <section class="card">
+    <div class="card-header">
+      <h2>Ваши папки</h2>
+      <% if (user.can_upload || user.is_admin) { %>
+        <a class="button" href="/folders/new">Создать папку</a>
+      <% } else { %>
+        <span class="badge">Нужны права на загрузку</span>
+      <% } %>
+    </div>
+    <% if (folders.length === 0) { %>
+      <p>Пока нет папок. Создайте первую, если у вас есть права.</p>
+    <% } else { %>
+      <ul class="folder-list">
+        <% folders.forEach(folder => { %>
+          <li>
+            <div>
+              <strong><%= folder.name %></strong>
+              <span class="muted">(<%= folder.visibility %>)</span>
+            </div>
+            <a class="button ghost" href="/folders/<%= folder.id %>">Открыть</a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+<% } %>
+
+<%- include('partials_footer') %>

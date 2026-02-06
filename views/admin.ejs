@@ -1,0 +1,36 @@
+<%- include('partials_header', { user }) %>
+<section class="card">
+  <h2>Управление доступами</h2>
+  <p class="muted">Выдавайте права на загрузку контента пользователям.</p>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Загрузка</th>
+        <th>Админ</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(person => { %>
+        <tr>
+          <td><%= person.email %></td>
+          <td><%= person.can_upload ? 'Да' : 'Нет' %></td>
+          <td><%= person.is_admin ? 'Да' : 'Нет' %></td>
+          <td>
+            <% if (!person.is_admin) { %>
+              <form method="post" action="/admin/grant" class="inline-form">
+                <input type="hidden" name="userId" value="<%= person.id %>">
+                <input type="hidden" name="canUpload" value="<%= person.can_upload ? '' : '1' %>">
+                <button class="button ghost" type="submit">
+                  <%= person.can_upload ? 'Отозвать' : 'Выдать' %>
+                </button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+<%- include('partials_footer') %>
